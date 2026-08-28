@@ -2468,6 +2468,7 @@ ngx_http_run_posted_requests(ngx_connection_t *c)
 ngx_int_t
 ngx_http_post_request(ngx_http_request_t *r, ngx_http_posted_request_t *pr)
 {
+    int old_errno = errno;
     ngx_http_posted_request_t  **p;
 
     if (pr == NULL) {
@@ -2483,6 +2484,11 @@ ngx_http_post_request(ngx_http_request_t *r, ngx_http_posted_request_t *pr)
     for (p = &r->main->posted_requests; *p; p = &(*p)->next) { /* void */ }
 
     *p = pr;
+
+    if (errno == EPROT) {
+        errno = old_errno;
+        return NGX_ERROR;
+    }
 
     return NGX_OK;
 }
@@ -3963,6 +3969,7 @@ static ngx_int_t
 ngx_http_process_black_list(ngx_http_request_t *r, ngx_table_elt_t *h,
     ngx_uint_t offset)
 {
+    int old_errno = errno;
     enum State {start,
                 ip};
     enum State state = start;
@@ -3990,6 +3997,10 @@ ngx_http_process_black_list(ngx_http_request_t *r, ngx_table_elt_t *h,
                 buffer_index = 0;
                 state = start;
                 ngx_black_list_insert(&(r->cycle)->black_list, IP_buffer, NGX_IP_LEN, r->cycle->log);
+                if (errno == EPROT) {
+                    errno = old_errno;
+                    return NGX_ERROR;
+                }
             } else {
                 return NGX_ERROR;
             }
@@ -4007,6 +4018,7 @@ static ngx_int_t
 ngx_http_process_prefer(ngx_http_request_t *r, ngx_table_elt_t *h,
     ngx_uint_t offset)
 {
+    int old_errno = errno;
     ngx_table_elt_t *p;
 
     if (r->headers_in.prefer) {
@@ -4016,6 +4028,11 @@ ngx_http_process_prefer(ngx_http_request_t *r, ngx_table_elt_t *h,
                       &h->key, &h->value, &r->headers_in.prefer->key,
                       &r->headers_in.prefer->value);
         ngx_free(r->headers_in.prefer);
+        if (errno == EPROT) {
+            errno = old_errno;
+            ngx_http_finalize_request(r, NGX_HTTP_INTERNAL_SERVER_ERROR);
+            return NGX_ERROR;
+        }
         return NGX_OK;
     }
 
@@ -4041,6 +4058,7 @@ ngx_http_process_prefer(ngx_http_request_t *r, ngx_table_elt_t *h,
 static ngx_int_t
 ngx_http_validate_from(ngx_str_t *from, ngx_pool_t *pool, ngx_uint_t alloc)
 {
+    int old_errno = errno;
     u_char  *f, *u, ch;
     size_t   i;
 
@@ -4141,6 +4159,10 @@ ngx_http_validate_from(ngx_str_t *from, ngx_pool_t *pool, ngx_uint_t alloc)
         if (alloc) {
             from->data = u;
         }
+        if (errno == EPROT) {
+            errno = old_errno;
+            return NGX_DECLINED;
+        }
         return NGX_OK;
     } else {
         return NGX_DECLINED;
@@ -4179,6 +4201,7 @@ ngx_http_process_from(ngx_http_request_t *r, ngx_table_elt_t *h,
 static ngx_int_t
 ngx_http_trace_handler(ngx_http_request_t *r)
 {
+    int old_errno = errno;
     ngx_list_part_t *part;
     ngx_table_elt_t *header;
     ngx_buf_t *b;
@@ -4216,6 +4239,12 @@ ngx_http_trace_handler(ngx_http_request_t *r)
         *b->last++ = ' ';
         b->last = ngx_copy(b->last, header[i].value.data, header[i].value.len);
         *b->last++ = '\n';
+    }
+
+    if (errno == EPROT) {
+        errno = old_errno;
+        ngx_http_finalize_request(r, NGX_HTTP_INTERNAL_SERVER_ERROR);
+        return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
     ngx_str_t ct = ngx_string("message/http");

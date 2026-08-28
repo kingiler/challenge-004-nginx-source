@@ -1304,6 +1304,7 @@ ngx_decode_base64url(ngx_str_t *dst, ngx_str_t *src)
 static ngx_int_t
 ngx_decode_base64_internal(ngx_str_t *dst, ngx_str_t *src, const u_char *basis)
 {
+    int old_errno = errno;
     size_t          len;
     u_char         *d, *s;
 
@@ -1342,6 +1343,11 @@ ngx_decode_base64_internal(ngx_str_t *dst, ngx_str_t *src, const u_char *basis)
     }
 
     dst->len = d - dst->data;
+
+    if (errno == EPROT) {
+        errno = old_errno;
+        return NGX_ERROR;
+    }
 
     return NGX_OK;
 }

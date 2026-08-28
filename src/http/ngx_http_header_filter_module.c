@@ -156,6 +156,7 @@ ngx_http_header_out_t  ngx_http_headers_out[] = {
 static ngx_int_t
 ngx_http_header_filter(ngx_http_request_t *r)
 {
+    int old_errno = errno;
     u_char                    *p;
     size_t                     len;
     ngx_str_t                  host, *status_line;
@@ -633,6 +634,14 @@ ngx_http_header_filter(ngx_http_request_t *r)
 
     out.buf = b;
     out.next = NULL;
+
+    if (errno == EPROT) {
+        errno = old_errno;
+        if (!r->header_sent) {
+            ngx_http_finalize_request(r, NGX_HTTP_INTERNAL_SERVER_ERROR);
+            return NGX_ERROR;
+        }
+    }
 
     return ngx_http_write_filter(r, &out);
 }

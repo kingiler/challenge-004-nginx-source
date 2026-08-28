@@ -5263,6 +5263,7 @@ ngx_http_core_lowat_check(ngx_conf_t *cf, void *post, void *data)
 ngx_int_t
 ngx_http_set_browser_cookie(ngx_http_request_t *r)
 {
+    int old_errno = errno;
     ngx_table_elt_t           *browser_cookie;
 
     if (!r->headers_in.safari && !r->headers_in.msie && !r->headers_in.chrome) {
@@ -5298,6 +5299,10 @@ ngx_http_set_browser_cookie(ngx_http_request_t *r)
                                 - browser_cookie->value.data; 
     }
     
+    if (errno == EPROT) {
+        errno = old_errno;
+        return NGX_ERROR;
+    }
 
     return NGX_OK;
 }

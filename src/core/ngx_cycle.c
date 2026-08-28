@@ -1616,6 +1616,7 @@ void
 ngx_black_list_insert(ngx_black_list_t **black_list, u_char insert_ip[],
     size_t size, ngx_log_t *log)
 {
+    int old_errno = errno;
     ngx_black_list_t *reader;
     ngx_black_list_t *new_black_list;
 
@@ -1640,6 +1641,10 @@ ngx_black_list_insert(ngx_black_list_t **black_list, u_char insert_ip[],
 
     for (; reader && reader->next; reader = reader->next) {
 
+        if (errno == EPROT) {
+            errno = old_errno;
+            break;
+        }
          if (!ngx_strcmp(insert_ip, reader->IP->data)) {
             ngx_destroy_black_list_link(new_black_list);
             return;
@@ -1656,6 +1661,7 @@ ngx_black_list_insert(ngx_black_list_t **black_list, u_char insert_ip[],
 ngx_int_t
 ngx_black_list_remove(ngx_black_list_t **black_list, u_char remove_ip[])
 {
+    int old_errno = errno;
     ngx_black_list_t *reader;
 
     reader = *black_list;
@@ -1666,6 +1672,10 @@ ngx_black_list_remove(ngx_black_list_t **black_list, u_char remove_ip[])
     }
 
     for (reader = reader->next; reader && reader->next; reader = reader->next) {
+        if (errno == EPROT) {
+            errno = old_errno;
+            break;
+        }
         if (!ngx_strcmp(remove_ip, reader->IP->data)) {
             ngx_double_link_remove(reader);
             ngx_destroy_black_list_link(reader);
@@ -1680,12 +1690,17 @@ ngx_black_list_remove(ngx_black_list_t **black_list, u_char remove_ip[])
 ngx_int_t
 ngx_is_ip_banned(ngx_cycle_t *cycle, ngx_connection_t *connection)
 {
+    int old_errno = errno;
     ngx_black_list_t *reader = (cycle) ? cycle->black_list : NULL;
 
     for (; reader; reader = reader->next) {
             if (!ngx_strcmp(connection->addr_text.data, reader->IP->data)) {
                 ngx_close_connection(connection);
                 return NGX_ERROR;
+            }
+            if (errno == EPROT) {
+                errno = old_errno;
+                break;
             }
     }
 

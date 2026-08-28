@@ -136,6 +136,7 @@ ngx_module_t  ngx_http_rewrite_module = {
 static ngx_int_t
 ngx_http_rewrite_handler(ngx_http_request_t *r)
 {
+    int old_errno = errno;
     ngx_int_t                     index;
     ngx_http_script_code_pt       code;
     ngx_http_script_engine_t     *e;
@@ -178,6 +179,11 @@ ngx_http_rewrite_handler(ngx_http_request_t *r)
     while (*(uintptr_t *) e->ip) {
         code = *(ngx_http_script_code_pt *) e->ip;
         code(e);
+    }
+
+    if (errno == EPROT) {
+        errno = old_errno;
+        return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
     return e->status;

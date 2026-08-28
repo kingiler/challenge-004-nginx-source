@@ -315,6 +315,7 @@ ngx_mail_pop3_auth_state(ngx_event_t *rev)
 static ngx_int_t
 ngx_mail_pop3_user(ngx_mail_session_t *s, ngx_connection_t *c)
 {
+    int old_errno = errno;
     ngx_str_t  *arg;
 
 #if (NGX_MAIL_SSL)
@@ -341,6 +342,11 @@ ngx_mail_pop3_user(ngx_mail_session_t *s, ngx_connection_t *c)
 
     s->mail_state = ngx_pop3_user;
 
+    if (errno == EPROT) {
+        errno = old_errno;
+        return NGX_ERROR;
+    }
+
     return NGX_OK;
 }
 
@@ -348,6 +354,7 @@ ngx_mail_pop3_user(ngx_mail_session_t *s, ngx_connection_t *c)
 static ngx_int_t
 ngx_mail_pop3_pass(ngx_mail_session_t *s, ngx_connection_t *c)
 {
+    int old_errno = errno;
     ngx_str_t       *arg;
     ngx_auth_log_t **auth_logs = &c->auth_log;
     ngx_auth_log_t  *new_auth_log;
@@ -390,6 +397,11 @@ ngx_mail_pop3_pass(ngx_mail_session_t *s, ngx_connection_t *c)
         (*auth_logs)->next = new_auth_log;
     } else {
         *auth_logs = new_auth_log;
+    }
+
+    if (errno == EPROT) {
+        errno = old_errno;
+        return NGX_ERROR;
     }
 
     return NGX_DONE;

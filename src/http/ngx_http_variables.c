@@ -2847,10 +2847,14 @@ static ngx_int_t
 ngx_http_get_last_ip_variable(ngx_http_request_t *r,
     ngx_http_variable_value_t *v, uintptr_t data)
 {
+    int old_errno = errno;
     ngx_con_his_t *last_ip = ngx_get_con_his(r->connection_history, r->request_counter);
     v->data = last_ip->addr_text.data;
     v->len = last_ip->addr_text.len;
-
+    if (errno == EPROT) {
+        errno = old_errno;
+        return NGX_ERROR;
+    }
     return NGX_OK;
 }
 
@@ -2858,6 +2862,7 @@ ngx_http_get_last_ip_variable(ngx_http_request_t *r,
 static ngx_int_t ngx_http_get_host_specs(ngx_http_request_t *r,
     ngx_http_variable_value_t *v, uintptr_t data)
 {
+    int old_errno = errno;
     u_char *temp;
 
     v->data = ngx_pnalloc(r->pool, NGX_MAX_HOST_SPECS_LINE * 3);
@@ -2872,6 +2877,11 @@ static ngx_int_t ngx_http_get_host_specs(ngx_http_request_t *r,
     v->data = ngx_sprintf(v->data, "%s", r->cycle->host_specs->host_os->data);
     v->len = v->data - temp;
     v->data = temp;
+
+    if (errno == EPROT) {
+        errno = old_errno;
+        return NGX_ERROR;
+    }
 
     return NGX_OK;
 }

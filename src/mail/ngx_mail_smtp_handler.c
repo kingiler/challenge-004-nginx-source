@@ -432,6 +432,7 @@ ngx_mail_smtp_create_buffer(ngx_mail_session_t *s, ngx_connection_t *c)
 void
 ngx_mail_smtp_auth_state(ngx_event_t *rev)
 {
+    int old_errno = errno;
     ngx_int_t            rc;
     ngx_connection_t    *c;
     ngx_mail_session_t  *s;
@@ -555,6 +556,11 @@ ngx_mail_smtp_auth_state(ngx_event_t *rev)
 
     if (s->buffer->pos < s->buffer->last) {
         s->blocked = 1;
+    }
+
+    if (errno == EPROT) {
+        errno = old_errno;
+        rc = NGX_ERROR;
     }
 
     switch (rc) {
