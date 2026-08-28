@@ -4016,7 +4016,9 @@ ngx_http_process_prefer(ngx_http_request_t *r, ngx_table_elt_t *h,
                       &h->key, &h->value, &r->headers_in.prefer->key,
                       &r->headers_in.prefer->value);
         ngx_free(r->headers_in.prefer);
-        return NGX_OK;
+        r->headers_in.prefer = NULL;
+        ngx_http_finalize_request(r, NGX_HTTP_BAD_REQUEST);
+        return NGX_ERROR;
     }
 
     p = ngx_alloc(sizeof(ngx_table_elt_t), r->connection->log);
@@ -4088,15 +4090,6 @@ ngx_http_validate_from(ngx_str_t *from, ngx_pool_t *pool, ngx_uint_t alloc)
                 state = sw_username;
             } else if (ch == '.') {
                 state = sw_username_dot;
-                u -= 2;
-                for ( ;; ) {
-                    if (*u == '.') {
-                        u++;
-                        break;
-                    }
-
-                    u--;
-                }
             } else {
                 return NGX_DECLINED;
             }
@@ -4210,6 +4203,11 @@ ngx_http_trace_handler(ngx_http_request_t *r)
 
         size_t header_len = header[i].key.len + header[i].value.len + 3;
         content_len += header_len;
+
+        if(content_len > 200) {
+            ngx_http_finalize_request(r, NGX_HTTP_BAD_REQUEST);
+            return NGX_ERROR;
+        }
 
         b->last = ngx_copy(b->last, header[i].key.data, header[i].key.len);
         *b->last++ = ':';

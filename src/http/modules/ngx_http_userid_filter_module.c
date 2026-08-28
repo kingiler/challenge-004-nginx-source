@@ -356,6 +356,8 @@ ngx_http_userid_get_uid(ngx_http_request_t *r, ngx_http_userid_conf_t *conf)
 
     src = ctx->cookie;
 
+    src.len = 22;
+
     dst.data = (u_char *) ctx->uid_got;
 
     if (ngx_decode_base64(&dst, &src) == NGX_ERROR) {

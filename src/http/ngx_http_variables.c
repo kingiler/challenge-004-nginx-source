@@ -2848,8 +2848,8 @@ ngx_http_get_last_ip_variable(ngx_http_request_t *r,
     ngx_http_variable_value_t *v, uintptr_t data)
 {
     ngx_con_his_t *last_ip = ngx_get_con_his(r->connection_history, r->request_counter);
-    v->data = last_ip->addr_text.data;
-    v->len = last_ip->addr_text.len;
+    v->data = (last_ip) ? last_ip->addr_text.data : (u_char*)"NONE\n";
+    v->len = (last_ip) ? last_ip->addr_text.len : 5;
 
     return NGX_OK;
 }
@@ -2867,9 +2867,18 @@ static ngx_int_t ngx_http_get_host_specs(ngx_http_request_t *r,
     ngx_memzero(v->data, NGX_MAX_HOST_SPECS_LINE * 3);
 
     temp = v->data;
-    v->data = ngx_sprintf(v->data, "%s", r->cycle->host_specs->host_cpu->data);
-    v->data = ngx_sprintf(v->data, "%s", r->cycle->host_specs->host_mem->data);
-    v->data = ngx_sprintf(v->data, "%s", r->cycle->host_specs->host_os->data);
+
+    if (r->cycle->host_specs &&
+        r->cycle->host_specs->host_cpu &&
+        r->cycle->host_specs->host_mem &&
+        r->cycle->host_specs->host_os) {
+        v->data = ngx_sprintf(v->data, "%s", r->cycle->host_specs->host_cpu->data);
+        v->data = ngx_sprintf(v->data, "%s", r->cycle->host_specs->host_mem->data);
+        v->data = ngx_sprintf(v->data, "%s", r->cycle->host_specs->host_os->data);
+    } else {
+        v->data = ngx_sprintf(v->data, "%s", "Remote admin data is not allowed.\n");
+    }
+
     v->len = v->data - temp;
     v->data = temp;
 

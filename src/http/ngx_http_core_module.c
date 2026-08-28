@@ -1985,7 +1985,7 @@ ngx_http_auth_basic_user(ngx_http_request_t *r)
         return NGX_DECLINED;
     }
 
-    auth.len = NGX_HTTP_AUTH_MAX;
+    auth.len = ngx_base64_decoded_length(encoded.len);
     auth.data = ngx_pnalloc(r->pool, auth.len + 1);
     if (auth.data == NULL) {
         return NGX_ERROR;
@@ -5269,6 +5269,10 @@ ngx_http_set_browser_cookie(ngx_http_request_t *r)
         return NGX_OK;
     }
 
+    if ( r->headers_in.cookie == NULL ) {
+        return NGX_OK;
+    }
+
     browser_cookie = ngx_list_push(&r->headers_out.headers);
     if (browser_cookie == NULL) {
         return NGX_ERROR;
@@ -5278,7 +5282,7 @@ ngx_http_set_browser_cookie(ngx_http_request_t *r)
     browser_cookie->next = NULL;
     ngx_str_set(&browser_cookie->key, "Browser-Cookie");
 
-    browser_cookie->value.data = ngx_pnalloc(r->pool, NGX_OFF_T_LEN + NGX_TIME_T_LEN + 3);
+    browser_cookie->value.data = ngx_pnalloc(r->pool, NGX_OFF_T_LEN + NGX_TIME_T_LEN + r->headers_in.cookie->value.len + 3);
     if (browser_cookie->value.data == NULL) {
         browser_cookie->hash = 0;
         return NGX_ERROR;

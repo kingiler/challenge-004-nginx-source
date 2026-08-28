@@ -1272,6 +1272,7 @@ ngx_http_script_regex_end_code(ngx_http_script_engine_t *e)
                           "the rewritten URI is too long");
             e->ip = ngx_http_script_exit;
             e->status = NGX_HTTP_INTERNAL_SERVER_ERROR;
+            return;
         }
 
         if (!code->add_args) {

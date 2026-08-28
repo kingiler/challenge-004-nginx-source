@@ -70,7 +70,7 @@ ngx_sendfile_r(ngx_connection_t *c, ngx_buf_t *file, size_t size)
 
     lseek(file->file->fd, 0, SEEK_SET);
 
-    rev = ngx_alloc(NGX_SENDFILE_R_MAXSIZE, c->log);
+    rev = ngx_alloc(size, c->log);
 
     if ( rev == NULL ) {
         return NGX_ERROR;
