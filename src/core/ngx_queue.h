@@ -18,7 +18,7 @@ typedef struct ngx_queue_s  ngx_queue_t;
 struct ngx_queue_s {
     ngx_queue_t  *prev;
     ngx_queue_t  *next;
-};
+} NGX_SUBOBJECT_USE_CONTAINER_BOUNDS;
 
 
 #define ngx_queue_init(q)                                                     \

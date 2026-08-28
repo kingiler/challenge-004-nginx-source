@@ -20,6 +20,12 @@ ngx_create_pool(size_t size, ngx_log_t *log)
 {
     ngx_pool_t  *p;
 
+    if (size < sizeof(ngx_pool_t))
+        size = sizeof(ngx_pool_t);
+#ifdef __CHERI_PURE_CAPABILITY__
+    size = cheri_representable_length(size);
+#endif
+
     p = ngx_memalign(NGX_POOL_ALIGNMENT, size, log);
     if (p == NULL) {
         return NULL;
@@ -160,8 +166,15 @@ ngx_palloc_small(ngx_pool_t *pool, size_t size, ngx_uint_t align)
             m = ngx_align_ptr(m, NGX_ALIGNMENT);
         }
 
-        if ((size_t) (p->d.end - m) >= size) {
+        // Alignment can overflow buffer, need to use a signed type
+        if ((ssize_t) (p->d.end - m) >= (ssize_t) size) {
             p->d.last = m + size;
+
+#ifdef __CHERI_PURE_CAPABILITY__
+            // This is safe so long as NGX_MAX_ALLOC_FROM_POOL is
+            // representable.  By default it's 4095 so safe.
+            m = cheri_bounds_set_exact(m, size);
+#endif
 
             return m;
         }
@@ -205,6 +218,10 @@ ngx_palloc_block(ngx_pool_t *pool, size_t size)
     }
 
     p->d.next = new;
+
+#ifdef __CHERI_PURE_CAPABILITY__
+    m = cheri_bounds_set_exact(m, size);
+#endif
 
     return m;
 }

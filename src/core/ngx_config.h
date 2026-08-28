@@ -44,6 +44,11 @@
 #endif
 
 
+#ifndef __has_builtin
+#define __has_builtin(x) 0
+#endif
+
+
 #ifndef NGX_HAVE_SO_SNDLOWAT
 #define NGX_HAVE_SO_SNDLOWAT     1
 #endif
@@ -79,6 +84,11 @@ typedef intptr_t        ngx_int_t;
 typedef uintptr_t       ngx_uint_t;
 typedef intptr_t        ngx_flag_t;
 
+#ifdef _PTRADDR_T_DECLARED
+typedef ptraddr_t	ngx_ptraddr_t;
+#else
+typedef uintptr_t	ngx_ptraddr_t;
+#endif
 
 #define NGX_INT32_LEN   (sizeof("-2147483648") - 1)
 #define NGX_INT64_LEN   (sizeof("-9223372036854775808") - 1)
@@ -97,9 +107,14 @@ typedef intptr_t        ngx_flag_t;
 #define NGX_ALIGNMENT   sizeof(unsigned long)    /* platform word */
 #endif
 
+#if __has_builtin(__builtin_align_up)
+#define ngx_align(d, a)     __builtin_align_up(d, a)
+#define ngx_align_ptr(p, a) __builtin_align_up(p, a)
+#else
 #define ngx_align(d, a)     (((d) + (a - 1)) & ~(a - 1))
 #define ngx_align_ptr(p, a)                                                   \
     (u_char *) (((uintptr_t) (p) + ((uintptr_t) a - 1)) & ~((uintptr_t) a - 1))
+#endif
 
 
 #define ngx_abort       abort
@@ -142,5 +157,14 @@ typedef intptr_t        ngx_flag_t;
 
 #endif
 
+#ifdef __CHERI_PURE_CAPABILITY__
+#include <cheriintrin.h>
+#endif
+
+#ifdef __CHERI_PURE_CAPABILITY__
+#define NGX_SUBOBJECT_USE_CONTAINER_BOUNDS __subobject_use_container_bounds
+#else
+#define NGX_SUBOBJECT_USE_CONTAINER_BOUNDS
+#endif
 
 #endif /* _NGX_CONFIG_H_INCLUDED_ */

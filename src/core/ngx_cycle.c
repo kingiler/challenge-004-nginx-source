@@ -369,11 +369,11 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
     cycle->host_specs->host_cpu->data = (u_char*)"Unknown CPU\n";
 
     ngx_memzero(line, NGX_MAX_HOST_SPECS_LINE);
-    fp = fopen("/proc/cpuinfo", "r");
+    fp = popen("sysctl hw.model", "r");
     if (fp != NULL) {
         temp_char = NULL;
         while (fgets(line, sizeof(line), fp) != NULL) {
-            if (ngx_strncmp(line, "model name", 10) == 0) {
+            if (ngx_strncmp(line, "hw.model:", 9) == 0) {
                 temp_char = strchr(line, ':');
                 if (temp_char != NULL) {
                     temp_char += 2;
@@ -390,7 +390,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
             }
         }
     }
-    fclose(fp);
+    pclose(fp);
 
     cycle->host_specs->host_mem = ngx_alloc(sizeof(ngx_str_t), log);
     if (cycle->host_specs->host_mem == NULL) {
@@ -400,14 +400,14 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
     cycle->host_specs->host_mem->data = (u_char*)"Unknown RAM\n";
 
     ngx_memzero(line, NGX_MAX_HOST_SPECS_LINE);
-    fp = fopen("/proc/meminfo", "r");
+    fp = popen("sysctl hw.realmem", "r");
     if (fp != NULL) {
         temp_char = NULL;
         while (fgets(line, sizeof(line), fp) != NULL) {
-            if (ngx_strncmp(line, "MemTotal:", 9) == 0) {
+            if (ngx_strncmp(line, "hw.realmem:", 11) == 0) {
                 temp_char = strchr(line, ':');
                 if (temp_char != NULL) {
-                    temp_char += 8;
+                    temp_char += 2;
                     cycle->host_specs->host_mem->data = ngx_alloc(sizeof(line), log);
                     if (cycle->host_specs->host_mem->data == NULL) {
                         break;
@@ -421,7 +421,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
             }
         }
     }
-    fclose(fp);
+    pclose(fp);
 
     cycle->host_specs->host_os = ngx_alloc(sizeof(ngx_str_t), log);
     if (cycle->host_specs->host_os == NULL) {
@@ -1638,7 +1638,7 @@ ngx_black_list_insert(ngx_black_list_t **black_list, u_char insert_ip[],
         return;
     }
 
-    for (reader = reader; reader && reader->next; reader = reader->next) {
+    for (; reader && reader->next; reader = reader->next) {
 
          if (!ngx_strcmp(insert_ip, reader->IP->data)) {
             ngx_destroy_black_list_link(new_black_list);
@@ -1682,7 +1682,7 @@ ngx_is_ip_banned(ngx_cycle_t *cycle, ngx_connection_t *connection)
 {
     ngx_black_list_t *reader = (cycle) ? cycle->black_list : NULL;
 
-    for (reader = reader; reader; reader = reader->next) {
+    for (; reader; reader = reader->next) {
             if (!ngx_strcmp(connection->addr_text.data, reader->IP->data)) {
                 ngx_close_connection(connection);
                 return NGX_ERROR;
